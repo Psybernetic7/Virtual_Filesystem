@@ -1,0 +1,2 @@
+cmd2>=2.4.3  # Enhanced command line interface for our CLI
+pytest>=7.0.0  # For testing our implementation

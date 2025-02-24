@@ -53,23 +53,22 @@ class Directory(FileSystemNode):
         self.update_modified_time()
         return True
     
-    def remove_child(self, name: str) -> None:
+    def remove_child(self, name: str, user: Optional[User] = None) -> bool:
         """
         Remove a child node from this directory.
         
-        When we remove a child, we:
-        1. Remove it from our children dictionary
-        2. Update our modification time
-        
         Args:
             name: The name of the child to remove
+            user: The user requesting the removal (for permission checking)
         
-        Note: This method assumes the caller has already checked for permissions
-        and whether the child exists.
+        Returns:
+            True if child was removed, False if child didn't exist or permission denied
         """
         if name in self.children:
             del self.children[name]
             self.update_modified_time()
+            return True
+        return False
     
     def get_child(self, name: str, user: Optional[User] = None) -> Optional[FileSystemNode]:
         """

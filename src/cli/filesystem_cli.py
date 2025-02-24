@@ -5,6 +5,7 @@ from typing import Optional, List
 from ..core.directory import Directory
 from ..core.filesystem import FileSystem
 from ..permissions.user_manager import UserManager
+from ..core.file import File
 
 class FilesystemCLI(cmd.Cmd):
     """
@@ -66,8 +67,12 @@ class FilesystemCLI(cmd.Cmd):
             print("Error: Missing directory name")
             return
             
-        if self.fs.create_directory(arg) is None:
+        result = self.fs.create_directory(arg)
+        if result is None:
+            # Get the last log entry to see what went wrong
+            last_log = self.fs.logger.logs[-1] if self.fs.logger.logs else "No log available"
             print(f"Error: Could not create directory '{arg}'")
+            print(f"Debug info: {last_log}")
 
     def do_touch(self, arg):
         'Create an empty file: touch filename'
@@ -112,7 +117,63 @@ class FilesystemCLI(cmd.Cmd):
         print("Goodbye!")
         return True
 
-    def do_EOF(self, arg):
-        'Exit on Ctrl-D'
-        print()
-        return self.do_exit(arg)
+    
+    def do_logs(self, arg):
+        'Show recent filesystem operations'
+        for log_entry in self.fs.logger.get_logs():
+            print(log_entry)
+
+    def do_rm(self, arg):
+        'Remove a file or directory: rm path'
+        if not arg:
+            print("Error: Missing path")
+            return
+        
+        if self.fs.delete(arg):
+            print(f"Deleted '{arg}'")
+        else:
+            print(f"Error: Could not delete '{arg}'")
+
+    def do_find(self, arg):
+        'Find files by name: find pattern'
+        if not arg:
+            print("Error: Missing search pattern")
+            return
+        
+        results = self.fs.search_by_name(arg)
+        if not results:
+            print("No matches found")
+        else:
+            print("Found matches:")
+            for path in results:
+                print(path)
+
+    def do_grep(self, arg):
+        'Search for text in files: grep text'
+        if not arg:
+            print("Error: Missing search text")
+            return
+        
+        results = self.fs.search_by_content(arg)
+        if not results:
+            print("No matches found")
+        else:
+            print("Found in files:")
+            for path in results:
+                print(path)
+
+    def do_ln(self, arg):
+        'Create symbolic link: ln -s target_path link_path'
+        args = arg.split()
+        
+        if len(args) < 3 or args[0] != '-s':
+            print("Usage: ln -s target_path link_path")
+            return
+        
+        target_path = args[1]
+        link_path = args[2]
+        
+        if self.fs.create_symlink(link_path, target_path) is None:
+            print(f"Error: Could not create symbolic link '{link_path}' -> '{target_path}'")
+        else:
+            print(f"Created symbolic link '{link_path}' -> '{target_path}'")

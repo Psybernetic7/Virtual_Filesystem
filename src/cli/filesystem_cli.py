@@ -177,3 +177,39 @@ class FilesystemCLI(cmd.Cmd):
             print(f"Error: Could not create symbolic link '{link_path}' -> '{target_path}'")
         else:
             print(f"Created symbolic link '{link_path}' -> '{target_path}'")
+
+    def do_su(self, arg):
+        'Switch user: su username'
+        if not arg:
+            print("Error: Missing username")
+            return
+            
+        if self.fs.user_manager.switch_user(arg):
+            print(f"Switched to user '{arg}'")
+            self.update_prompt()
+        else:
+            print(f"Error: User '{arg}' not found")
+
+    def do_whoami(self, arg):
+        'Display current user name'
+        current_user = self.fs.user_manager.get_current_user()
+        print(f"{current_user.username}")
+
+    def do_useradd(self, arg):
+        'Add a new user: useradd username'
+        if not arg:
+            print("Error: Missing username")
+            return
+        
+        current_user = self.fs.user_manager.get_current_user()
+        if 'root' not in current_user.groups:
+            print("Error: Only root can add users")
+            return
+        
+        try:
+            # Find next available user ID
+            next_id = max([u.user_id for u in self.fs.user_manager.users.values()]) + 1
+            user = self.fs.user_manager.add_user(arg, next_id)
+            print(f"User '{arg}' added successfully")
+        except ValueError as e:
+            print(f"Error: {str(e)}")

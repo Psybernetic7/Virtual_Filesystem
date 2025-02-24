@@ -1,1 +1,2 @@
 cmd2>=2.4.3  # Enhanced command line interface for our CLI
+cryptography>=41.0.0 # For encryption

@@ -116,13 +116,12 @@ class UserManager:
         Returns:
             True if successful, False if user doesn't exist
         """
+        # Always allow switching to root
+        if username == 'root':
+            self.current_user = self.users['root']
+            return True
+            
         if username not in self.users:
-            return False
-        
-        # Only root can switch to any user
-        # Other users can't switch to different users
-        if (self.current_user.username != 'root' and 
-            self.current_user.username != username):
             return False
         
         self.current_user = self.users[username]

@@ -213,3 +213,26 @@ class FilesystemCLI(cmd.Cmd):
             print(f"User '{arg}' added successfully")
         except ValueError as e:
             print(f"Error: {str(e)}")
+
+    def do_save(self, arg):
+        'Save encrypted filesystem state: save filename'
+        if not arg:
+            print("Error: Missing filename")
+            return
+        
+        if self.fs.save_state(arg):
+            print(f"Filesystem state encrypted and saved")
+        else:
+            print(f"Error: Could not save state")
+
+    def do_load(self, arg):
+        'Load encrypted filesystem state: load filename'
+        if not arg:
+            print("Error: Missing filename")
+            return
+        
+        if self.fs.load_state(arg):
+            print(f"Filesystem state loaded and decrypted")
+            self.update_prompt()
+        else:
+            print(f"Error: Could not load state")

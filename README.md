@@ -7,6 +7,8 @@ This project implements an in-memory virtual filesystem that provides Unix-like 
 
 ### Prerequisites
 - Python 3.8 or higher
+- cryptography package for state encryption
+- cmd2 package for enhanced CLI
 
 ### Installation
 
@@ -44,25 +46,34 @@ rm file.txt           # Delete file
 ```bash
 mkdir dirname          # Create directory
 cd dirname            # Change directory
+cd ..                 # Move up one directory
+cd /path/to/dir       # Absolute path navigation
 ls                    # List contents
 pwd                   # Show current path
 ```
 
 ### Search Operations:
 ```bash
-find *.txt          # Search by filename
+find *.txt          # Search by filename (supports wildcards)
 grep "text"          # Search by file contents
 ```
 
 ### Symbolic Links:
 ```bash
-ln -s path_to_target target_link     # Create symbolic link
+ln -s /path/to/target link_name     # Create symbolic link
 ```
 
 ### User Management:
 ```bash
 whoami               # Show current user
+useradd username     # Create new user (root only)
 su username          # Switch user
+```
+
+### State Persistence
+```bash
+save filename        # Save encrypted filesystem state
+load filename        # Load encrypted filesystem state
 ```
 
 ## API Design Decisions
@@ -97,20 +108,50 @@ The API design follows several key principles:
 - Special handling for `.` and `..` references
 - Support for both absolute and relative paths
 
+### State Persistence:
+- Chose local encryption over remote storage
+- Pro: Self-contained, secure. Con: Limited to local machine. Trade-off: Simplicity vs distributed capabilities
+
+## Implementation Notes
+
+### Path Resolution Process
+
+- Split path into components
+- Handle absolute vs relative paths
+- Process special directories (., ..)
+- Follow symbolic links when encountered
+- Validate permissions at each step
+
+### Symbolic Link Handling
+
+- Links store target paths, not references
+- Followed automatically during path resolution
+- Can point to non-existent targets
+- Circular references prevented
+
+### Permission Checking
+
+- Checked at each operation
+- Root user bypasses permission checks
+- Group permissions inherited from Unix model
+- Owner/group/others access levels
+
 ## Known Limitations & Areas for Improvement
 
 ### Current Limitations:
 - **No concurrent access support**: Single-user access at a time
+- **User Management**: Basic user commands only (useradd, su, whoami)
 - **Limited file types**: Currently only supports text-based files
 - **Basic permission model** compared to real Unix systems
 
 ### Potential Improvements:
 - Add support for binary files
+- Enhanced User Management
+- State Persistence by remote storage option
 - Add more sophisticated permission management
 - Implement proper concurrent access
 - Add command history and tab completion in CLI
 - Implement file type detection
-- Add support for file attributes and extended metadata
 
 ## Project Structure
 ```

@@ -9,6 +9,8 @@ from ..permissions.user import User
 from ..permissions.user_manager import UserManager
 from ..utils.logger import FileSystemLogger
 from .symlink import SymbolicLink
+from ..utils.state_persistence import StatePersistence
+
 
 class FileSystem:
     """
@@ -32,6 +34,15 @@ class FileSystem:
         self.root = Directory('', owner='root', group='root')
         self.current_directory = self.root
         self.logger = FileSystemLogger()
+        self.state_manager = StatePersistence()
+
+    def save_state(self, filepath: str) -> bool:
+        """Save filesystem state to encrypted file."""
+        return self.state_manager.save_state(self, filepath)
+    
+    def load_state(self, filepath: str) -> bool:
+        """Load filesystem state from encrypted file."""
+        return self.state_manager.load_state(self, filepath)
 
     
     def get_node_by_path(self, path: str, follow_links: bool = True) -> Optional[FileSystemNode]:

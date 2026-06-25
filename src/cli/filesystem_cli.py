@@ -1,11 +1,17 @@
 # src/cli/filesystem_cli.py
 
 import cmd
+import os
+import subprocess
+import sys
+import termios
 from typing import Optional, List
 from ..core.directory import Directory
 from ..core.filesystem import FileSystem
 from ..permissions.user_manager import UserManager
 from ..core.file import File
+from ..container.container import Container
+from ..container.rootfs import RootfsManager
 
 class FilesystemCLI(cmd.Cmd):
     """
@@ -236,3 +242,79 @@ class FilesystemCLI(cmd.Cmd):
             self.update_prompt()
         else:
             print(f"Error: Could not load state")
+
+    def do_contain(self, arg):
+        'Container operations: contain run <rootfs> <cmd> | contain export <dest> | contain info'
+        args = arg.split()
+        if not args:
+            print("Usage:")
+            print("  contain run <rootfs_path> <command> [args...]")
+            print("  contain export <real_path>")
+            print("  contain info")
+            return
+
+        subcmd = args[0]
+
+        if subcmd == 'run':
+            if len(args) < 3:
+                print("Usage: contain run <rootfs_path> <command> [args...]")
+                return
+            rootfs_path = args[1]
+            command = args[2:]
+
+            try:
+                saved_term = termios.tcgetattr(sys.stdin.fileno())
+            except (termios.error, OSError):
+                saved_term = None
+
+            container = Container(rootfs_path=rootfs_path, command=command)
+            try:
+                exit_code = container.run()
+            except Exception as e:
+                exit_code = 1
+                print(f"Container error: {e}")
+            finally:
+                subprocess.run(['stty', 'sane'], stdin=sys.stdin, stderr=subprocess.DEVNULL)
+                if saved_term is not None:
+                    try:
+                        termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, saved_term)
+                    except (termios.error, OSError):
+                        pass
+                try:
+                    os.tcsetpgrp(sys.stdin.fileno(), os.getpgrp())
+                except OSError:
+                    pass
+                sys.stdout.flush()
+                sys.stderr.flush()
+
+            print(f"Container exited with code {exit_code}", flush=True)
+            self.update_prompt()
+
+        elif subcmd == 'export':
+            if len(args) < 2:
+                print("Usage: contain export <real_path>")
+                return
+            target_dir = args[1]
+            RootfsManager.export_vfs_to_rootfs(self.fs, target_dir)
+            print(f"Virtual filesystem exported to '{target_dir}'")
+
+        elif subcmd == 'info':
+            print("Container capabilities:")
+            print(f"  Root: {'yes' if os.geteuid() == 0 else 'no (container run requires root)'}")
+            print(f"  os.unshare: {'available' if hasattr(os, 'unshare') else 'unavailable'}")
+            namespaces = ['uts', 'pid', 'mount', 'net', 'user', 'ipc', 'cgroup']
+            for ns in namespaces:
+                flag = f'CLONE_NEW{ns.upper()}' if ns != 'mount' else 'CLONE_NEWNS'
+                available = hasattr(os, flag)
+                print(f"  {ns:>8} namespace: {'available' if available else 'unavailable'}")
+            try:
+                with open('/proc/sys/kernel/cap_last_cap') as f:
+                    print(f"  Capabilities: {int(f.read().strip()) + 1} supported")
+            except OSError:
+                print("  Capabilities: unknown")
+            cgroup_v2 = os.path.exists('/sys/fs/cgroup/cgroup.controllers')
+            print(f"  cgroup v2: {'available' if cgroup_v2 else 'unavailable'}")
+
+        else:
+            print(f"Unknown subcommand: {subcmd}")
+            print("Valid subcommands: run, export, info")

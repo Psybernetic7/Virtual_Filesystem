@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+.fs_key
+.fs_state_*
+*.swp
+*.swo
+*~

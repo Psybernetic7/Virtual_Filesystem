@@ -76,3 +76,61 @@ rm important.txt
 # Restore the state
 load backup1           # important.txt is restored
 ```
+
+## Container Operations Example
+
+### Check System Capabilities
+```bash
+# See what container features your system supports
+contain info
+# Output:
+#   Container capabilities:
+#     Root: no (container run requires root)
+#     os.unshare: available
+#       uts namespace: available
+#       pid namespace: available
+#     mount namespace: available
+#       net namespace: available
+#      user namespace: available
+#       ipc namespace: available
+#    cgroup namespace: available
+#     Capabilities: 41 supported
+#     cgroup v2: available
+```
+
+### Export VFS to Disk
+```bash
+# Build a filesystem in memory
+mkdir /myroot
+cd /myroot
+mkdir bin
+mkdir lib
+mkdir usr
+mkdir etc
+write etc/hostname "my-container"
+write etc/greeting "Welcome to the container!"
+
+# Export it to a real directory on disk
+contain export /tmp/my_rootfs
+
+# The in-memory tree is now materialized at /tmp/my_rootfs
+# with real directories and files matching what you built
+```
+
+### Run a Contained Process
+```bash
+# Requires root (run the VFS CLI with sudo)
+# Launch /bin/sh inside a container with full isolation:
+#   - UTS, PID, mount, net, IPC namespaces
+#   - pivot_root into the rootfs
+#   - /proc, /dev, /sys mounted
+#   - Capabilities dropped
+#   - Resource limits applied (256MB memory, 64 PIDs)
+contain run /path/to/rootfs /bin/sh
+
+# Inside the container:
+#   hostname         -> "container"
+#   cat /proc/1/status -> shows the shell as PID 1
+#   ls /dev          -> null, zero, random, urandom, tty
+# Container exited with code 0
+```

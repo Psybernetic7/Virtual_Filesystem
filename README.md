@@ -76,6 +76,22 @@ save filename        # Save encrypted filesystem state
 load filename        # Load encrypted filesystem state
 ```
 
+### Container Operations
+Container features require root — run the CLI with `sudo python3 main.py`.
+```bash
+contain info                            # Show system container capabilities
+contain export /tmp/rootfs              # Export VFS tree to disk as a rootfs
+contain run /path/to/rootfs /bin/sh     # Launch a process inside an isolated container
+```
+
+The `contain run` command creates a fully isolated Linux container with:
+- **Namespace isolation**: UTS, PID, mount, network, IPC namespaces
+- **Root filesystem**: `pivot_root` into the specified rootfs
+- **Resource limits**: Memory, CPU, and PID limits via cgroup v2
+- **Capability dropping**: Reduces the container's Linux capabilities to a safe subset
+- **Resource limits**: File descriptor and process limits via rlimits
+- **Device nodes**: Minimal `/dev` with null, zero, random, urandom, tty
+
 ## API Design Decisions
 The API design follows several key principles:
 
@@ -156,12 +172,20 @@ The API design follows several key principles:
 ## Project Structure
 ```
 virtual_filesystem/
-├── main.py                 # Entry point
+├── main.py                 # Entry point (also handles --container-child re-exec)
 ├── requirements.txt        # Dependencies
 └── src/
     ├── core/              # Core filesystem components
     ├── permissions/       # User and permission management
     ├── cli/               # Command-line interface
+    ├── container/         # Linux container runtime
+    │   ├── container.py       # Orchestrator + child entry point
+    │   ├── namespaces.py      # Linux namespace management
+    │   ├── rootfs.py          # pivot_root, mount setup, VFS export
+    │   ├── cgroups.py         # cgroup v2 resource control
+    │   ├── capabilities.py    # Linux capability dropping
+    │   ├── rlimits.py         # Resource limits (setrlimit)
+    │   └── syscall_wrappers.py # ctypes wrappers for mount, pivot_root, prctl
     └── utils/             # Utility functions
 ```
 
